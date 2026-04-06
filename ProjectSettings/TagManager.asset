@@ -5,16 +5,20 @@ TagManager:
   serializedVersion: 3
   tags:
   - Ground
+  - Enemy
+  - HidingSpot
+  - Obstacle
+  - Flash
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Ground
   - Water
   - UI
-  - 
-  - 
-  - 
+  - Player
+  - HidingPlayer
+  - Enemy
   - 
   - 
   - 
@@ -41,6 +45,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Background
+    uniqueID: 245409955
     locked: 0
   m_RenderingLayers:
   - Default
