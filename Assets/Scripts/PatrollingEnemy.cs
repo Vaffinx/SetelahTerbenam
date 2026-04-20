@@ -3,15 +3,21 @@ using System.Collections;
 
 public class PatrollingEnemy : MonoBehaviour
 {
+    [Header("Walking Points")]
     public GameObject Point1;
     public GameObject Point2;
+
+    [Header("Components")]
     private Rigidbody2D rb;
     private Animator anim;
     private SpriteRenderer sr;
     private Transform CurrentPoint;
-    public float speed;
-    public float stunDuration = 3f;
+    private PlayerMovment player;
+    private float DefaultSpeed;
 
+    [Header("Movement")]
+    [SerializeField] private float speed;
+    [SerializeField] private float stunDuration = 3f;
     private bool isStunned = false;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -22,12 +28,13 @@ public class PatrollingEnemy : MonoBehaviour
        sr = GetComponent<SpriteRenderer>();
        CurrentPoint = Point1.transform;
        anim.SetBool("Walk", true);
+       player = FindObjectOfType<PlayerMovment>();
+       DefaultSpeed = speed;
     }
 
     // Update is called once per frame
     void Update()
     {
-
         //movement
         Vector2 targetPoint = CurrentPoint.position - transform.position;
         if(CurrentPoint == Point2.transform)
@@ -69,7 +76,7 @@ public class PatrollingEnemy : MonoBehaviour
         Gizmos.DrawLine(Point1.transform.position, Point2.transform.position);
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void OnTriggerStay2D(Collider2D collision)
     {
         if (collision.CompareTag("Flash"))
         {
@@ -79,11 +86,24 @@ public class PatrollingEnemy : MonoBehaviour
         }
     }
 
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Player"))
+        {
+            player.GameOver("Hantu!");
+            Debug.Log("Player is caught!");
+        }
+    }
+
     private IEnumerator StunEnemy()
     {
-        speed = 0f;
-        yield return new WaitForSeconds(stunDuration);
-        isStunned = false;
-        speed = 5f;
+
+        if (isStunned)
+        {
+            speed = 0f;
+            yield return new WaitForSeconds(stunDuration);
+            isStunned = false;
+            speed = DefaultSpeed;
+        }
     }
 }

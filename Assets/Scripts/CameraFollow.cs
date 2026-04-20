@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
+
+    [Header("Camera Settings")]
     public Transform player; // player yang akan diikuti kamera
     public float smootSpeed; // kecepatan kamera mengikuti player
     public Vector3 offset; // jarak offset antara kamera dan player

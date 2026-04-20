@@ -6,22 +6,45 @@ using TMPro;
 
 public class PlayerMovment : MonoBehaviour
 {
+    [Header("Movement Speed")]
     public float speed;
     public float jumpForce;
+
+    [Header("Flashlight Settings")]
+    public GameObject flashlight;
+    public float FlashDuration;
+    public float FlashCooldown;
+
+    [Header("Game Over Settings")]
+    public GameObject gameOverPanel;
+    public TextMeshProUGUI gameOverText;
 
     private Rigidbody2D rb;
     private Collider2D collider;
     private Animator anim;
     private SpriteRenderer sr;
     private Vector3 worldPos;
+    private Camera cam;
+    private float flashlightTimer;
 
+    [Header("Pause Menu")]
+    public GameObject pauseMenu;
+    private bool isPaused = false;
 
-   [SerializeField] private LayerMask groundLayer;
+    [Header("Flashlight Angle Offset")]
+    public float flashlightAngleOffset = -30f;
+
+    [Header("Ground Layer")]
+    public LayerMask groundLayer;
 
     private bool isJumping = false;
     private bool isGrounded = false;
     private bool isHiding = false;
     private bool isHidingSpot = false;
+    private bool isFlashOn = false;
+    private bool isCoolDown = false;
+    private bool isCursorVisible = false;
+    private int hidingSpotsInRange = 0; // Menghitung berapa spot sembunyi yang tumpang tindih
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -31,6 +54,7 @@ public class PlayerMovment : MonoBehaviour
         collider = GetComponent<Collider2D>();
         sr = GetComponent<SpriteRenderer>();
         cam = Camera.main;
+        Cursor.visible = false;
     }
 
     // Update is called once per frame
@@ -40,6 +64,8 @@ public class PlayerMovment : MonoBehaviour
         Hiding();
         FlashlightOnOff();
         FlashLightFollowMouse();
+        showCursor();
+        pause();
 
         float move = Input.GetAxis("Horizontal"); // Mendapatkan input horizontal (A/D atau panah kiri/kanan)
 
@@ -111,8 +137,64 @@ public class PlayerMovment : MonoBehaviour
         {
             anim.SetBool("Jump", false);
         }
-        
+    }
 
+    private void pause()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape) && !isPaused)
+        {
+            pauseMenu.SetActive(true);
+            Time.timeScale = 0f;
+            showCursor();
+            isPaused = true;
+        }
+        else if (Input.GetKeyDown(KeyCode.Escape) && isPaused)
+        {
+            pauseMenu.SetActive(false);
+            Time.timeScale = 1f;
+            showCursor();
+            isPaused = false;
+        }
+    }
+
+    private void showCursor()
+    {
+        if (Input.GetKeyDown(KeyCode.BackQuote) && !isCursorVisible)
+        {
+            Cursor.visible = true;
+            isCursorVisible = true;
+        }
+        else if (Input.GetKeyDown(KeyCode.BackQuote) && isCursorVisible)
+        {
+            Cursor.visible = false;
+            isCursorVisible = false;
+        }
+    }
+
+    public void DisableControl()
+    {
+        rb.linearVelocity = Vector2.zero;
+        anim.SetBool("Walk", false);
+        anim.SetBool("Jump", false);
+        speed = 0;
+        jumpForce = 0;
+    }
+
+    public void GameOver(string Teks)
+    {
+        gameOverPanel.SetActive(true);
+        gameOverText.text = "Karaktermu Terbunuh Karena: " + Teks;
+
+        flashlight.SetActive(false);
+        DisableControl();
+        Cursor.visible = true;
+        isCursorVisible = true;
+    }
+
+    public void EnableControl()
+    {
+        speed = 5;
+        jumpForce = 6;
     }
 
     private void Grounded()
@@ -148,6 +230,7 @@ public class PlayerMovment : MonoBehaviour
                 anim.SetBool("Walk", false);
                 anim.SetBool("Jump", false);
                 Debug.Log("Player is hiding!");
+                flashlight.SetActive(false);
             }
             if(!isHiding)
             {
@@ -166,6 +249,7 @@ public class PlayerMovment : MonoBehaviour
     {
         if (collision.CompareTag("HidingSpot"))
         {
+            hidingSpotsInRange++; // Tambah 1 jika masuk area sembunyi
             isHidingSpot = true;
         }
     }
@@ -174,33 +258,24 @@ public class PlayerMovment : MonoBehaviour
     {
         if (collision.CompareTag("HidingSpot"))
         {
-            if (!isHiding)
+            hidingSpotsInRange--; // Kurangi 1 jika keluar
+            
+            // Kalau sudah tidak ada spot yang tumpang tindih sama sekali
+            if (hidingSpotsInRange <= 0)
             {
-                isHidingSpot = false;
+                hidingSpotsInRange = 0; // Pastikan tidak tembus ke minus
+                if (!isHiding)
+                {
+                    isHidingSpot = false; // Baru matikan isHidingSpot
+                }
             }
         }   
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.collider.CompareTag("Obstacle"))
-        {
-            Debug.Log("Player is Hit!");
-        }
+
     }
-
-
-
-    // Flashlight
-    public GameObject flashlight;
-    public float FlashDuration;
-    public float FlashCooldown;
-    public TextMeshProUGUI flashlightTimerText;
-
-    private Camera cam;
-    private float flashlightTimer;
-    private bool isFlashOn = false;
-    private bool isCoolDown = false;
 
     private void FlashlightOnOff()
     {
@@ -216,11 +291,29 @@ public class PlayerMovment : MonoBehaviour
 
     private void FlashLightFollowMouse()
     {
-        Vector3 MousePos = Input.mousePosition;
-        MousePos.z = 0;
-        worldPos = cam.ScreenToWorldPoint(MousePos);
-        Vector2 direction = worldPos - transform.position;
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        if (cam == null) cam = Camera.main;
+
+        // Ambil posisi mouse di layar
+        Vector3 mouseScreenPos = Input.mousePosition;
+
+        // Cek apakah mouse masih di dalam area kamera (supaya tidak error)
+        Rect camRect = cam.pixelRect;
+        if (!camRect.Contains(mouseScreenPos))
+            return;
+
+        // Ubah posisi mouse dari layar ke dunia game
+        // Z harus = jarak kamera ke player (untuk kamera 2D, pakai nilai absolut Z kamera)
+        mouseScreenPos.z = Mathf.Abs(cam.transform.position.z);
+        worldPos = cam.ScreenToWorldPoint(mouseScreenPos);
+
+        // Pastikan flashlight tetap di posisi player (supaya tidak geser)
+        flashlight.transform.position = transform.position;
+
+        // Hitung arah dari player ke mouse
+        Vector2 direction = (Vector2)worldPos - (Vector2)transform.position;
+
+        // Hitung sudut + offset (atur offset di Inspector supaya pas)
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + flashlightAngleOffset;
         flashlight.transform.rotation = Quaternion.Euler(0, 0, angle);
     }
 

@@ -9,6 +9,7 @@ TagManager:
   - HidingSpot
   - Obstacle
   - Flash
+  - EndGap
   layers:
   - Default
   - TransparentFX
@@ -19,9 +20,9 @@ TagManager:
   - Player
   - HidingPlayer
   - Enemy
-  - 
-  - 
-  - 
+  - Flash
+  - Sensor
+  - Obstacle
   - 
   - 
   - 
