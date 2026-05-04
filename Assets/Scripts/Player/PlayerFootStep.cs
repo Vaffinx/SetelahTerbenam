@@ -1,10 +1,11 @@
 using UnityEngine;
-using System.Collections;
 
 public class PlayerFootStep : MonoBehaviour
 {
     private AudioManager audioManager;
     private PlayerMovment playerMovement;
+    private bool PlayingFootStep = false;
+    private float footstepSpeed = 0.5f;
 
     void Awake()
     {
@@ -12,25 +13,38 @@ public class PlayerFootStep : MonoBehaviour
         playerMovement = FindAnyObjectByType<PlayerMovment>();
     }
 
-    void Start()
+    void Update()
     {
-        StartCoroutine(PlayerFootstep());
-    }
-
-    IEnumerator PlayerFootstep()
-    {
-        while (true)
+        if (playerMovement.isMoving && playerMovement.isGrounded && !playerMovement.isHiding)
         {
-            if (playerMovement.isMoving && playerMovement.isGrounded && !playerMovement.isHiding)
+            if (!PlayingFootStep)
             {
-                audioManager.PlaySFX(audioManager.WalkSFX);
-                // Wait for the EXACT length of the audio clip so it never overlaps/stacks
-                yield return new WaitForSeconds(audioManager.WalkSFX.length);
-            }
-            else
-            {
-                yield return null;
+                StartFootStep();
             }
         }
+        else
+        {
+            if (PlayingFootStep)
+            {
+                StopFootStep();
+            }
+        }
+    }
+
+    void StartFootStep()
+    {
+        PlayingFootStep = true;
+        InvokeRepeating(nameof(PlayFootStep), 0f, footstepSpeed);
+    }
+
+    void StopFootStep()
+    {
+        PlayingFootStep = false;
+        CancelInvoke(nameof(PlayFootStep));
+    }
+
+    void PlayFootStep()
+    {
+        audioManager.walk();
     }
 }

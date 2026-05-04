@@ -5,11 +5,12 @@ public class AudioManager : MonoBehaviour
     [Header("AudioSource")]
     [SerializeField] AudioSource BGM;
     [SerializeField] AudioSource SFX;
+    [SerializeField] AudioSource RandomPitchSFX;
 
     [Header("AudioClip")]
     public AudioClip bgm;
     public AudioClip jumpSFX;
-    public AudioClip WalkSFX;
+    public AudioClip[] WalkSFX;
     public AudioClip DieSFX;
 
     void Start()    
@@ -23,6 +24,11 @@ public class AudioManager : MonoBehaviour
         SFX.PlayOneShot(clip);
     }
 
+    public void StopSFX(AudioClip clip)
+    {
+        SFX.Stop();
+    }
+
     public void jump()
     {
         SFX.PlayOneShot(jumpSFX);
@@ -30,7 +36,10 @@ public class AudioManager : MonoBehaviour
 
     public void walk()
     {
-        SFX.PlayOneShot(WalkSFX);
+        AudioClip clip = WalkSFX[Random.Range(0, WalkSFX.Length)];
+        RandomPitchSFX.pitch = Random.Range(1f, 1.1f);
+        RandomPitchSFX.PlayOneShot(clip);
+        Debug.Log("pitch: " + RandomPitchSFX.pitch);
     }
 
     public void die()
